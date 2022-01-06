@@ -37,12 +37,12 @@ class GITRepo
   end
 
   def git_blame_forward_each(topdir, relpath, rev, &b)
-    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', rev, '--', relpath]
+    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', rev, '--', "#{topdir}/#{relpath}"]
     parse_git_blame_porcelain(command, &b)
   end
 
   def git_blame_reverse_each(topdir, relpath, rev, &b)
-    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', '--reverse', rev, '--', relpath]
+    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', '--reverse', rev, '--', "#{topdir}/#{relpath}"]
     parse_git_blame_porcelain(command, &b)
   end
 

@@ -127,10 +127,11 @@ end
 def find_git_repository(relpath, d, rev)
   relpath = relpath.to_s
   if rev
-    rev, status = Open3.capture2('git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', rev, "--", relpath)
+    command = ['git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', rev, "--", "#{d.to_s}/#{relpath}"]
   else
-    rev, status = Open3.capture2('git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', "--", relpath)
+    command = ['git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', "--", "#{d.to_s}/#{relpath}"]
   end
+  rev, status = Open3.capture2(*command)
   if !status.success?
     raise "git log failed"
   end
@@ -150,7 +151,7 @@ def parse_arguments(argv)
 end
 
 def setup_repository(filename, rev)
-  f = Pathname(filename)
+  f = Pathname(filename).realpath
   [*f.ascend.to_a, Pathname('.')].each {|d|
     if (d+".git").exist?
       relpath = f.relative_path_from(d)
@@ -161,6 +162,7 @@ def setup_repository(filename, rev)
 end
 
 def run_browser(url)
+  #ret = system "xterm", "-e", "w3m", url
   ret = system "w3m", url
   if ret != true
     raise "w3m not found"
