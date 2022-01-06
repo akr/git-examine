@@ -13,16 +13,15 @@ Gem::Specification.new do |s|
     lib/git-examine.rb
     lib/git-examine/git.rb
     lib/git-examine/main.rb
-    lib/git-examine/svn.rb
   ]
   s.test_files = %w[
   ]
   s.homepage = 'https://github.com/akr/git-examine'
   s.require_path = 'lib'
   s.executables << 'git-examine'
-  s.summary = 'an interactive wrapper for "annotate" and "diff" of svn and git'
+  s.summary = 'an interactive wrapper for "annotate" and "diff" of git'
   s.description = <<'End'
-git-examine is an interactive wrapper for "annotate" and "diff" of svn and git.
+git-examine is an interactive wrapper for "annotate" and "diff" of git.
 
 git-examine enables you to browse annotated sources and diffs interactively.
 End

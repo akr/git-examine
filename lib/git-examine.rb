@@ -8,6 +8,5 @@ require 'erb'
 require 'pp'
 require 'open3'
 
-require 'git-examine/svn'
 require 'git-examine/git'
 require 'git-examine/main'

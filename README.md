@@ -1,7 +1,7 @@
 git-examine
 ===========
 
-git-examine is an interactive wrapper for "annotate/blame/praise" and "diff" of svn and git.
+git-examine is an interactive wrapper for "blame" and "diff" of git.
 
 ## Usage
 
@@ -11,7 +11,6 @@ git-examine is an interactive wrapper for "annotate/blame/praise" and "diff" of 
 
 * ruby 2.1
 * w3m
-* svn
 * git
 
 ## Install
@@ -22,6 +21,12 @@ git-examine is an interactive wrapper for "annotate/blame/praise" and "diff" of 
 
     git clone https://github.com/akr/git-examine.git
     ruby -Igit-examine/lib git-examine/bin/git-examine git-managed-file
+
+
+## History
+
+The old version of git-examine was called vcs-ann.
+vcs-ann supported svn but git-examine supports only git.
 
 ## Author
 

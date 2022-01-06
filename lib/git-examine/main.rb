@@ -124,38 +124,6 @@ class Server
   end
 end
 
-def find_svn_repository(arg)
-  svn_info_xml = IO.popen(['svn', 'info', '--xml', arg]) {|io| io.read }
-
-  # <url>http://svn.ruby-lang.org/repos/ruby/trunk/ChangeLog</url>
-  # <root>http://svn.ruby-lang.org/repos/ruby</root>
-  # <commit
-  #    revision="44930">
-
-  if %r{<url>(.*?)</url>} !~ svn_info_xml
-    raise "unexpected 'svn info' result: no url element"
-  end
-  url = CGI.unescapeHTML($1)
-  if %r{<root>(.*?)</root>} !~ svn_info_xml
-    raise "unexpected 'svn info' result: no root element"
-  end
-  root = CGI.unescapeHTML($1)
-  if %r{#{Regexp.escape root}} !~ url
-    raise "unexpected 'svn info' result: url is not a prefix of root"
-  end
-  relpath = $'
-  if !relpath.empty? && %r{\A/} !~ relpath
-    raise "unexpected 'svn info' result: relpath doesn't start with a slash"
-  end
-
-  if %r{<commit\s+revision="(\d+)">} !~ svn_info_xml
-    raise "unexpected 'svn info' result: no revision"
-  end
-  rev = $1.to_i
-
-  return SVNRepo.new(root), relpath, rev
-end
-
 def find_git_repository(relpath, d, rev)
   relpath = relpath.to_s
   if rev
@@ -184,9 +152,6 @@ end
 def setup_repository(filename, rev)
   f = Pathname(filename)
   [*f.ascend.to_a, Pathname('.')].each {|d|
-    if (d+".svn").exist?
-      return find_svn_repository(filename)
-    end
     if (d+".git").exist?
       relpath = f.relative_path_from(d)
       return find_git_repository(relpath, d, rev)
