@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'vcs-ann'
+require 'git-examine'
 
 main(ARGV)

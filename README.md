@@ -1,11 +1,11 @@
-vcs-ann
-=======
+git-examine
+===========
 
-vcs-ann is an interactive wrapper for "annotate/blame/praise" and "diff" of svn and git.
+git-examine is an interactive wrapper for "annotate/blame/praise" and "diff" of svn and git.
 
 ## Usage
 
-    vcs-ann [commit] svn-or-git-managed-file
+    git-examine [commit] svn-or-git-managed-file
 
 ## Requirement
 
@@ -16,12 +16,12 @@ vcs-ann is an interactive wrapper for "annotate/blame/praise" and "diff" of svn 
 
 ## Install
 
-    gem install vcs-ann
+    gem install git-examine
 
 ## Run without gem
 
-    git clone https://github.com/akr/vcs-ann.git
-    ruby -Ivcs-ann/lib vcs-ann/bin/vcs-ann svn-or-git-managed-file
+    git clone https://github.com/akr/git-examine.git
+    ruby -Igit-examine/lib git-examine/bin/git-examine git-managed-file
 
 ## Author
 

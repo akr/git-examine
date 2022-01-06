@@ -1,5 +1,5 @@
 Gem::Specification.new do |s|
-  s.name = 'vcs-ann'
+  s.name = 'git-examine'
   s.version = '0.1'
   s.licenses = ['BSD-3-Clause']
   s.date = '2014-04-29'
@@ -9,21 +9,21 @@ Gem::Specification.new do |s|
   s.files = %w[
     LICENSE
     README.md
-    bin/vcs-ann
-    lib/vcs-ann.rb
-    lib/vcs-ann/git.rb
-    lib/vcs-ann/main.rb
-    lib/vcs-ann/svn.rb
+    bin/git-examine
+    lib/git-examine.rb
+    lib/git-examine/git.rb
+    lib/git-examine/main.rb
+    lib/git-examine/svn.rb
   ]
   s.test_files = %w[
   ]
-  s.homepage = 'https://github.com/akr/vcs-ann'
+  s.homepage = 'https://github.com/akr/git-examine'
   s.require_path = 'lib'
-  s.executables << 'vcs-ann'
+  s.executables << 'git-examine'
   s.summary = 'an interactive wrapper for "annotate" and "diff" of svn and git'
   s.description = <<'End'
-vcs-ann is an interactive wrapper for "annotate" and "diff" of svn and git.
+git-examine is an interactive wrapper for "annotate" and "diff" of svn and git.
 
-vcs-ann enables you to browse annotated sources and diffs interactively.
+git-examine enables you to browse annotated sources and diffs interactively.
 End
 end
