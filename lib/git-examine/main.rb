@@ -88,8 +88,10 @@ class Server
   end
 
   def annotate_url(filetype, relpath, commit_hash)
-    reluri = relpath.gsub(%r{[^/]+}) { CGI.escape($&) }
-    reluri = '/' + reluri if %r{\A/} !~ reluri
+    names = relpath.split(/\/+/)
+    raise "relpath contains .." if names.include?('..')
+    names.delete('.')
+    reluri = names.map {|n| '/' + CGI.escape(n) }.join
     "#{@http_root}/#{filetype}/#{commit_hash}#{reluri}"
   end
 
@@ -120,6 +122,8 @@ class Server
       res.body = repo.format_commit list[1..-1]
     when 'diff-children'
       res.body = repo.format_diff_children list[1..-1]
+    when 'log'
+      res.body = repo.format_log list[1..-1]
     else
       raise "unexpected command"
     end
