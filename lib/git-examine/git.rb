@@ -21,14 +21,14 @@ class GITRepo
   end
 
   def format_log(list)
-    commit_hash = list[0]
+    target_commit = list[0]
     relpath_list = list[1..-1]
     relpath = relpath_list.empty? ? '.' : relpath_list.map {|n| n + '/' }.join
     command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'log', '-z', relpath]
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{h commit_hash}</li>\n"
+    result << "<li>target_commit=#{h target_commit}</li>\n"
     result << "<li>relpath=#{h relpath}</li>\n"
     result << "</ul>\n"
     out.each_line("\0") {|commit|
@@ -37,9 +37,9 @@ class GITRepo
       commit.each_line {|line|
         case line
         when /\Acommit (\S+)(.*)\n/
-          this_commit_hash, rest = $1, $2
-          href = ['commit', this_commit_hash].map {|n| u(n) }.join('/')
-          result << %Q{commit <a name="#{this_commit_hash}" href="/#{href}">#{h(this_commit_hash)}</a>#{h(rest)}\n}
+          this_commit, rest = $1, $2
+          href = ['commit', this_commit].map {|n| u(n) }.join('/')
+          result << %Q{commit <a name="#{this_commit}" href="/#{href}">#{h(this_commit)}</a>#{h(rest)}\n}
         else
           result << h(line)
         end
@@ -50,16 +50,16 @@ class GITRepo
   end
 
   def format_dir(list)
-    commit_hash = list[0]
+    target_commit = list[0]
     relpath_list = list[1..-1]
     relpath = relpath_list.empty? ? '.' : relpath_list.map {|n| n + '/' }.join
-    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', commit_hash, relpath]
+    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', target_commit, relpath]
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{h commit_hash}</li>\n"
+    result << "<li>target_commit=#{h target_commit}</li>\n"
     result << "<li>relpath=#{h relpath}</li>\n"
-    href = ['log', commit_hash, *relpath_list].map {|n| u(n) }.join('/') + '#' + commit_hash
+    href = ['log', target_commit, *relpath_list].map {|n| u(n) }.join('/') + '#' + target_commit
     result << %Q{<li><a href="/#{h href}">log</a></li>\n}
     result << "</ul>\n"
     result << "<pre>"
@@ -73,12 +73,12 @@ class GITRepo
       filename = $4
       case filetype
       when 'blob'
-        href = ['file', commit_hash, *filename.split(/\//)]
+        href = ['file', target_commit, *filename.split(/\//)]
         href.delete('.')
         href.map! {|n| u(n) }
         result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
       when 'tree'
-        href = ['dir', commit_hash, *filename.split(/\//)]
+        href = ['dir', target_commit, *filename.split(/\//)]
         href.delete('.')
         href.map! {|n| u(n) }
         result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
@@ -134,14 +134,14 @@ class GITRepo
   end
 
   def format_file(list)
-    commit_hash = list[0]
+    target_commit = list[0]
     relpath = list[1..-1].join('/')
 
     result = '<pre>'
 
     forward_data = []
     forward_author_name_width = 0
-    git_blame_forward_each(@topdir.to_s, relpath, commit_hash) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
+    git_blame_forward_each(@topdir.to_s, relpath, target_commit) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
       author_time = Time.at(header['author-time'].to_i).strftime("%Y-%m-%d")
       author_name = header['author'] || 'no author'
       content_line = content_line.chomp.expand_tab
@@ -150,7 +150,7 @@ class GITRepo
     }
 
     reverse_data = []
-    git_blame_reverse_each(@topdir.to_s, relpath, commit_hash) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
+    git_blame_reverse_each(@topdir.to_s, relpath, target_commit) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
       author_time = Time.at(header['author-time'].to_i).strftime("%Y-%m-%d")
       author_name = header['author']
       content_line = content_line.chomp.expand_tab
@@ -208,7 +208,7 @@ class GITRepo
 
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{h target_commit}</li>\n"
+    result << "<li>target_commit=#{h target_commit}</li>\n"
     href = ['log', target_commit].map {|n| u(n) }.join('/') + '#' + target_commit
     result << %Q{<li><a href="/#{h href}">log</a></li>\n}
     result << "</ul>\n"
