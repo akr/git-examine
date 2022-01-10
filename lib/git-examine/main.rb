@@ -91,7 +91,7 @@ class Server
     names = relpath.split(/\/+/)
     raise "relpath contains .." if names.include?('..')
     names.delete('.')
-    reluri = names.map {|n| '/' + CGI.escape(n) }.join
+    reluri = names.map {|n| '/' + u(n) }.join
     "#{@http_root}/#{filetype}/#{commit_hash}#{reluri}"
   end
 

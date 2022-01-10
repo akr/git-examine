@@ -22,13 +22,14 @@ class GITRepo
 
   def format_log(list)
     commit_hash = list[0]
-    relpath = list[1..-1].join('/')
+    relpath_list = list[1..-1]
+    relpath = relpath_list.empty? ? '.' : relpath_list.map {|n| n + '/' }.join
     command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'log', '-z', relpath]
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{CGI.escapeHTML commit_hash}</li>\n"
-    result << "<li>relpath=#{CGI.escapeHTML relpath}</li>\n"
+    result << "<li>commit_hash=#{h commit_hash}</li>\n"
+    result << "<li>relpath=#{h relpath}</li>\n"
     result << "</ul>\n"
     out.each_line("\0") {|commit|
       commit.chomp!("\0")
@@ -37,10 +38,10 @@ class GITRepo
         case line
         when /\Acommit (\S+)(.*)\n/
           this_commit_hash, rest = $1, $2
-          href = ['commit', this_commit_hash].map {|n| CGI.escape(n) }.join('/')
-          result << %Q{commit <a name="#{this_commit_hash}" href="/#{href}">#{CGI.escapeHTML(this_commit_hash)}</a>#{CGI.escapeHTML(rest)}\n}
+          href = ['commit', this_commit_hash].map {|n| u(n) }.join('/')
+          result << %Q{commit <a name="#{this_commit_hash}" href="/#{href}">#{h(this_commit_hash)}</a>#{h(rest)}\n}
         else
-          result << CGI.escapeHTML(line)
+          result << h(line)
         end
       }
       result << "</pre>\n"
@@ -56,10 +57,10 @@ class GITRepo
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{CGI.escapeHTML commit_hash}</li>\n"
-    result << "<li>relpath=#{CGI.escapeHTML relpath}</li>\n"
-    href = ['log', commit_hash, *relpath_list].map {|n| CGI.escape(n) }.join('/') + '#' + commit_hash
-    result << %Q{<li><a href="/#{href}">log</a></li>\n}
+    result << "<li>commit_hash=#{h commit_hash}</li>\n"
+    result << "<li>relpath=#{h relpath}</li>\n"
+    href = ['log', commit_hash, *relpath_list].map {|n| u(n) }.join('/') + '#' + commit_hash
+    result << %Q{<li><a href="/#{h href}">log</a></li>\n}
     result << "</ul>\n"
     result << "<pre>"
     out.each_line("\0") {|line|
@@ -74,15 +75,15 @@ class GITRepo
       when 'blob'
         href = ['file', commit_hash, *filename.split(/\//)]
         href.delete('.')
-        href.map! {|n| CGI.escape n }
-        result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
+        href.map! {|n| u(n) }
+        result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
       when 'tree'
         href = ['dir', commit_hash, *filename.split(/\//)]
         href.delete('.')
-        href.map! {|n| CGI.escape n }
-        result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
+        href.map! {|n| u(n) }
+        result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
       else
-        result << %Q{#{CGI.escapeHTML filetype} #{CGI.escapeHTML filename}\n}
+        result << %Q{#{h filetype} #{h filename}\n}
       end
     }
     result << "</pre>\n"
