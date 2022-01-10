@@ -209,6 +209,8 @@ class GITRepo
     result = ""
     result << "<ul>\n"
     result << "<li>commit_hash=#{h target_rev}</li>\n"
+    href = ['log', target_rev].map {|n| u(n) }.join('/') + '#' + target_rev
+    result << %Q{<li><a href="/#{h href}">log</a></li>\n}
     result << "</ul>\n"
 
     result << '<pre>'
