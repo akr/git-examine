@@ -87,10 +87,10 @@ class Server
     @th.join
   end
 
-  def annotate_url(relpath, rev)
+  def annotate_url(filetype, relpath, rev)
     reluri = relpath.gsub(%r{[^/]+}) { CGI.escape($&) }
     reluri = '/' + reluri if %r{\A/} !~ reluri
-    "#{@http_root}/file/#{rev}#{reluri}"
+    "#{@http_root}/#{filetype}/#{rev}#{reluri}"
   end
 
   def handle_request0(repo, req, res)
@@ -112,6 +112,8 @@ class Server
     res.content_type = 'text/html'
     list = req.request_uri.path.scan(%r{[^/]+}).map {|s| CGI.unescape(s) }
     case list[0]
+    when 'dir'
+      res.body = repo.format_dir list[1..-1]
     when 'file'
       res.body = repo.format_file list[1..-1]
     when 'commit', 'diff-parents'
@@ -151,6 +153,7 @@ def parse_arguments(argv)
 end
 
 def setup_repository(filename, rev)
+  filename ||= '.'
   f = Pathname(filename).realpath
   [*f.ascend.to_a, Pathname('.')].each {|d|
     if (d+".git").exist?
@@ -172,7 +175,8 @@ end
 def main(argv)
   filename, rev = parse_arguments(argv)
   repo, relpath, rev = setup_repository filename, rev
+  filetype = repo.file_type(rev, relpath)
   server = Server.new(repo)
-  run_browser server.annotate_url(relpath, rev)
+  run_browser server.annotate_url(filetype, relpath, rev)
   exit(true)
 end

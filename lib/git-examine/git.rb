@@ -3,6 +3,48 @@ class GITRepo
     @topdir = topdir
   end
 
+  def file_type(rev, relpath)
+    if relpath == '.'
+      'dir'
+    else
+      command = ['git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', rev, relpath]
+      out, status = Open3.capture2(*command)
+      case out
+      when /\A\d+ blob /
+        'file'
+      when /\A\d+ tree /
+        'dir'
+      else
+        raise "unexpected result in git ls-tree"
+      end
+    end
+  end
+
+  def format_dir(list)
+    rev = list[0]
+    relpath = list[1..-1].join('/') + '/'
+    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', rev, relpath]
+    out, status = Open3.capture2(*command)
+    result = ""
+    result << "<ul>\n"
+    result << "<li>rev=#{CGI.escapeHTML rev}</li>\n"
+    result << "<li>relpath=#{CGI.escapeHTML relpath}</li>\n"
+    result << "</ul>\n"
+    result << "<pre>"
+    out.each_line("\0") {|line|
+      unless /\A(\S+) (\S+) (\S+)\t([^\0]*)\0\z/ =~ line
+        raise "unexpected line in git-ls-tree: #{line.inspect}"
+      end
+      mode = $1
+      filetype = $2
+      obj = $3
+      filename = $4
+      result << "#{CGI.escapeHTML filename}\n"
+    }
+    result << "</pre>\n"
+    result
+  end
+
   def parse_git_blame_porcelain(command)
     out, status = Open3.capture2(*command)
     out.force_encoding('locale').scrub!
