@@ -1,4 +1,4 @@
-include ERB::Util
+include ERB::Util # "h" and "u" for escaping as HTML and URL.
 
 class String
   # expand TABs destructively.
