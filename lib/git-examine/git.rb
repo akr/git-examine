@@ -205,9 +205,24 @@ class GITRepo
     commit_rev = $1
     parent_revs = $2.strip.split(/\s+/)
 
-    result = '<pre>'
+    result = ""
+    result << "<ul>\n"
+    result << "<li>commit_hash=#{h target_rev}</li>\n"
+    result << "</ul>\n"
+
+    result << '<pre>'
     log_out.each_line {|line|
-      result << "#{h line.chomp}\n"
+      case line
+      when /\Acommit (.*)\n\z/
+        commits = $1
+        commits = commits.scan(/\S+/).map {|c|
+          href = ['commit', c].map {|n| '/' + u(n) }.join
+          %Q{<a href="#{h href}">#{c}</a>}
+        }.join(' ')
+        result << "commit #{commits}\n"
+      else
+        result << "#{h line.chomp}\n"
+      end
     }
     result << '</pre>'
 
