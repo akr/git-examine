@@ -39,7 +39,20 @@ class GITRepo
       filetype = $2
       obj = $3
       filename = $4
-      result << "#{CGI.escapeHTML filename}\n"
+      case filetype
+      when 'blob'
+        href = ['file', rev, *filename.split(/\//)]
+        href.delete('.')
+        href.map! {|n| CGI.escape n }
+        result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
+      when 'tree'
+        href = ['dir', rev, *filename.split(/\//)]
+        href.delete('.')
+        href.map! {|n| CGI.escape n }
+        result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
+      else
+        result << %Q{#{CGI.escapeHTML filetype} #{CGI.escapeHTML filename}\n}
+      end
     }
     result << "</pre>\n"
     result
