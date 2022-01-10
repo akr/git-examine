@@ -161,24 +161,24 @@ class GITRepo
       raise "different length with forward and reverse blame: forward=#{forward_data.length} != reverse=#{reverse_data.length}"
     end
 
-    f_prev_rev = nil
-    r_prev_rev = nil
+    f_prev_commit = nil
+    r_prev_commit = nil
     0.upto(forward_data.length-1) {|ln|
-      f_rev, f_author_time, f_author_name, f_content_line, f_filename, f_original_file_line_number = forward_data[ln]
-      r_rev, r_author_time, r_author_name, r_content_line, r_filename, r_original_file_line_number = reverse_data[ln]
+      f_commit, f_author_time, f_author_name, f_content_line, f_filename, f_original_file_line_number = forward_data[ln]
+      r_commit, r_author_time, r_author_name, r_content_line, r_filename, r_original_file_line_number = reverse_data[ln]
 
       ln += 1
       result << %{<a name="#{h ln.to_s}"></a>}
 
-      f_formatted_author_time = f_prev_rev == f_rev ? ' ' * 10 : f_author_time
+      f_formatted_author_time = f_prev_commit == f_commit ? ' ' * 10 : f_author_time
       f_formatted_author_name = "%-#{forward_author_name_width}s" % f_author_name
-      f_commit_url = "/diff-parents/#{f_rev}\##{u(f_rev+"/"+f_filename.to_s+":"+f_original_file_line_number.to_s)}"
+      f_commit_url = "/diff-parents/#{f_commit}\##{u(f_commit+"/"+f_filename.to_s+":"+f_original_file_line_number.to_s)}"
 
-      r_formatted_author_time = r_prev_rev == r_rev ? ' ' * 10 : r_author_time
-      r_commit_url = "/diff-children/#{r_rev}\##{u(r_rev+"/"+r_filename.to_s+":"+r_original_file_line_number.to_s)}"
+      r_formatted_author_time = r_prev_commit == r_commit ? ' ' * 10 : r_author_time
+      r_commit_url = "/diff-children/#{r_commit}\##{u(r_commit+"/"+r_filename.to_s+":"+r_original_file_line_number.to_s)}"
 
-      f_prev_rev = f_rev
-      r_prev_rev = r_rev
+      f_prev_commit = f_commit
+      r_prev_commit = r_commit
 
       result << %{<a href="#{h f_commit_url}">#{h f_formatted_author_time}</a> }
       result << %{<a href="#{h r_commit_url}">#{h r_formatted_author_time}</a> }
@@ -192,9 +192,9 @@ class GITRepo
   end
 
   def format_commit(list)
-    target_rev = list[0]
+    target_commit = list[0]
     log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
-	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', '--parents', target_rev)
+	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', '--parents', target_commit)
     log_out.force_encoding('locale').scrub!
     if !log_status.success?
       raise "git log failed."
@@ -203,13 +203,13 @@ class GITRepo
     if /^commit ([0-9a-f]+)(.*)\n/ !~ log_out
       raise "git log doesn't produce 'commit' line."
     end
-    commit_rev = $1
-    parent_revs = $2.strip.split(/\s+/)
+    this_commit = $1
+    parent_commits = $2.strip.split(/\s+/)
 
     result = ""
     result << "<ul>\n"
-    result << "<li>commit_hash=#{h target_rev}</li>\n"
-    href = ['log', target_rev].map {|n| u(n) }.join('/') + '#' + target_rev
+    result << "<li>commit_hash=#{h target_commit}</li>\n"
+    href = ['log', target_commit].map {|n| u(n) }.join('/') + '#' + target_commit
     result << %Q{<li><a href="/#{h href}">log</a></li>\n}
     result << "</ul>\n"
 
@@ -229,11 +229,11 @@ class GITRepo
     }
     result << '</pre>'
 
-    if parent_revs.empty?
-      result << "no diffs since no parents: #{target_rev}"
+    if parent_commits.empty?
+      result << "no diffs since no parents: #{target_commit}"
     else
-      parent_revs.each {|parent_rev|
-        result << format_diff(parent_rev, commit_rev)
+      parent_commits.each {|parent_commit|
+        result << format_diff(parent_commit, this_commit)
       }
     end
 
@@ -241,7 +241,7 @@ class GITRepo
   end
 
   def format_diff_children(list)
-    target_rev = list[0]
+    target_commit = list[0]
 
     log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
 	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--pretty=format:%H %P')
@@ -252,22 +252,22 @@ class GITRepo
 
     children = {}
     log_out.each_line {|line|
-      commit_hash, *parent_revs = line.strip.split(/\s+/)
-      parent_revs.each {|parent_rev|
-        children[parent_rev] ||= []
-        children[parent_rev] << commit_hash
+      commit_hash, *parent_commits = line.strip.split(/\s+/)
+      parent_commits.each {|parent_commit|
+        children[parent_commit] ||= []
+        children[parent_commit] << commit_hash
       }
     }
 
-    unless children[target_rev]
-      return "no diffs since no children: #{target_rev}"
+    unless children[target_commit]
+      return "no diffs since no children: #{target_commit}"
     end
 
     result = String.new
 
-    children[target_rev].each {|child_rev|
+    children[target_commit].each {|child_commit|
       log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
-          'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', child_rev)
+          'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', child_commit)
       log_out.force_encoding('locale').scrub!
       if !log_status.success?
         raise "git log failed."
@@ -279,16 +279,16 @@ class GITRepo
       }
       result << '</pre>'
 
-      result << format_diff(target_rev, child_rev)
+      result << format_diff(target_commit, child_commit)
     }
 
     result
   end
 
-  def format_diff(rev1, rev2)
+  def format_diff(commit1, commit2)
     result = String.new
     diff_out, diff_status = Open3.capture2({'LC_ALL'=>'C'},
-        'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'diff', rev1, rev2)
+        'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'diff', commit1, commit2)
     diff_out.force_encoding('locale').scrub!
     if !diff_status.success?
       raise "git diff failed."
@@ -314,26 +314,26 @@ class GITRepo
       when :del
         line, content_line, ln_cur1 = rest
         content_line = content_line.chomp.expand_tab
-        rev1_url = "/file/#{rev1}/#{filename1}\##{ln_cur1}"
-        result << %{<a name="#{h(u(rev1.to_s+"/"+filename1+":"+ln_cur1.to_s))}"></a>}
-        result << %{<a href="#{h rev1_url}"> -</a>}
+        commit1_url = "/file/#{commit1}/#{filename1}\##{ln_cur1}"
+        result << %{<a name="#{h(u(commit1.to_s+"/"+filename1+":"+ln_cur1.to_s))}"></a>}
+        result << %{<a href="#{h commit1_url}"> -</a>}
         result << (h content_line) << "\n"
       when :add
         line, content_line, ln_cur2 = rest
         content_line = content_line.chomp.expand_tab
-        rev2_url = "/file/#{rev2}/#{filename2}\##{ln_cur2}"
-        result << %{<a name="#{h(u(rev2.to_s+"/"+filename2+":"+ln_cur2.to_s))}"></a>}
-        result << %{<a href="#{h rev2_url}"> +</a>}
+        commit2_url = "/file/#{commit2}/#{filename2}\##{ln_cur2}"
+        result << %{<a name="#{h(u(commit2.to_s+"/"+filename2+":"+ln_cur2.to_s))}"></a>}
+        result << %{<a href="#{h commit2_url}"> +</a>}
         result << (h content_line) << "\n"
       when :com
         line, content_line, ln_cur1, ln_cur2 = rest
         content_line = content_line.chomp.expand_tab
-        rev1_url = "/file/#{rev1}/#{filename1}\##{ln_cur1}"
-        rev2_url = "/file/#{rev2}/#{filename2}\##{ln_cur2}"
-        result << %{<a name="#{h(u(rev1.to_s+"/"+filename1+":"+ln_cur1.to_s))}"></a>}
-        result << %{<a name="#{h(u(rev2.to_s+"/"+filename2+":"+ln_cur2.to_s))}"></a>}
-        result << %{<a href="#{h rev1_url}"> </a>}
-        result << %{<a href="#{h rev2_url}"> </a>}
+        commit1_url = "/file/#{commit1}/#{filename1}\##{ln_cur1}"
+        commit2_url = "/file/#{commit2}/#{filename2}\##{ln_cur2}"
+        result << %{<a name="#{h(u(commit1.to_s+"/"+filename1+":"+ln_cur1.to_s))}"></a>}
+        result << %{<a name="#{h(u(commit2.to_s+"/"+filename2+":"+ln_cur2.to_s))}"></a>}
+        result << %{<a href="#{h commit1_url}"> </a>}
+        result << %{<a href="#{h commit2_url}"> </a>}
         result << (h content_line) << "\n"
       when :other
         line, = rest
