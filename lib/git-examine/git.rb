@@ -3,11 +3,11 @@ class GITRepo
     @topdir = topdir
   end
 
-  def file_type(rev, relpath)
+  def file_type(commit_hash, relpath)
     if relpath == '.'
       'dir'
     else
-      command = ['git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', rev, relpath]
+      command = ['git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', commit_hash, relpath]
       out, status = Open3.capture2(*command)
       case out
       when /\A\d+ blob /
@@ -21,13 +21,13 @@ class GITRepo
   end
 
   def format_dir(list)
-    rev = list[0]
+    commit_hash = list[0]
     relpath = list[1..-1].join('/') + '/'
-    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', rev, relpath]
+    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'ls-tree', '--full-tree', '-z', commit_hash, relpath]
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>rev=#{CGI.escapeHTML rev}</li>\n"
+    result << "<li>commit_hash=#{CGI.escapeHTML commit_hash}</li>\n"
     result << "<li>relpath=#{CGI.escapeHTML relpath}</li>\n"
     result << "</ul>\n"
     result << "<pre>"
@@ -41,12 +41,12 @@ class GITRepo
       filename = $4
       case filetype
       when 'blob'
-        href = ['file', rev, *filename.split(/\//)]
+        href = ['file', commit_hash, *filename.split(/\//)]
         href.delete('.')
         href.map! {|n| CGI.escape n }
         result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
       when 'tree'
-        href = ['dir', rev, *filename.split(/\//)]
+        href = ['dir', commit_hash, *filename.split(/\//)]
         href.delete('.')
         href.map! {|n| CGI.escape n }
         result << %Q{#{CGI.escapeHTML filetype} <a href="/#{href.join('/')}">#{CGI.escapeHTML filename}</a>\n}
@@ -74,55 +74,55 @@ class GITRepo
         block << line
       else
         content_line = line.sub(/\A\t/, '')
-        rev, original_file_line_number, final_file_line_number, numlines = block.shift.split(/\s+/)
-        if !header_hash[rev]
+        commit_hash, original_file_line_number, final_file_line_number, numlines = block.shift.split(/\s+/)
+        if !header_hash[commit_hash]
           header = {}
           block.each {|header_line|
             if / / =~ header_line.chomp
               header[$`] = $'
             end
           }
-          header_hash[rev] = header
+          header_hash[commit_hash] = header
         end
-        header = header_hash[rev]
-        yield rev, original_file_line_number, final_file_line_number, numlines, header, content_line
+        header = header_hash[commit_hash]
+        yield commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line
         block = []
       end
     }
   end
 
-  def git_blame_forward_each(topdir, relpath, rev, &b)
-    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', rev, '--', "#{topdir}/#{relpath}"]
+  def git_blame_forward_each(topdir, relpath, commit_hash, &b)
+    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', commit_hash, '--', "#{topdir}/#{relpath}"]
     parse_git_blame_porcelain(command, &b)
   end
 
-  def git_blame_reverse_each(topdir, relpath, rev, &b)
-    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', '--reverse', rev, '--', "#{topdir}/#{relpath}"]
+  def git_blame_reverse_each(topdir, relpath, commit_hash, &b)
+    command = ['git', "--git-dir=#{topdir}/.git", "--work-tree=#{topdir}", 'blame', '--porcelain', '--reverse', commit_hash, '--', "#{topdir}/#{relpath}"]
     parse_git_blame_porcelain(command, &b)
   end
 
   def format_file(list)
-    rev = list[0]
+    commit_hash = list[0]
     relpath = list[1..-1].join('/')
 
     result = '<pre>'
 
     forward_data = []
     forward_author_name_width = 0
-    git_blame_forward_each(@topdir.to_s, relpath, rev) {|rev, original_file_line_number, final_file_line_number, numlines, header, content_line|
+    git_blame_forward_each(@topdir.to_s, relpath, commit_hash) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
       author_time = Time.at(header['author-time'].to_i).strftime("%Y-%m-%d")
       author_name = header['author'] || 'no author'
       content_line = content_line.chomp.expand_tab
       forward_author_name_width = author_name.length if forward_author_name_width < author_name.length
-      forward_data << [rev, author_time, author_name, content_line, header['filename'], original_file_line_number]
+      forward_data << [commit_hash, author_time, author_name, content_line, header['filename'], original_file_line_number]
     }
 
     reverse_data = []
-    git_blame_reverse_each(@topdir.to_s, relpath, rev) {|rev, original_file_line_number, final_file_line_number, numlines, header, content_line|
+    git_blame_reverse_each(@topdir.to_s, relpath, commit_hash) {|commit_hash, original_file_line_number, final_file_line_number, numlines, header, content_line|
       author_time = Time.at(header['author-time'].to_i).strftime("%Y-%m-%d")
       author_name = header['author']
       content_line = content_line.chomp.expand_tab
-      reverse_data << [rev, author_time, author_name, content_line, header['filename'], original_file_line_number]
+      reverse_data << [commit_hash, author_time, author_name, content_line, header['filename'], original_file_line_number]
     }
 
     if forward_data.length != reverse_data.length
@@ -203,10 +203,10 @@ class GITRepo
 
     children = {}
     log_out.each_line {|line|
-      rev, *parent_revs = line.strip.split(/\s+/)
+      commit_hash, *parent_revs = line.strip.split(/\s+/)
       parent_revs.each {|parent_rev|
         children[parent_rev] ||= []
-        children[parent_rev] << rev
+        children[parent_rev] << commit_hash
       }
     }
 

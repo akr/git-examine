@@ -87,10 +87,10 @@ class Server
     @th.join
   end
 
-  def annotate_url(filetype, relpath, rev)
+  def annotate_url(filetype, relpath, commit_hash)
     reluri = relpath.gsub(%r{[^/]+}) { CGI.escape($&) }
     reluri = '/' + reluri if %r{\A/} !~ reluri
-    "#{@http_root}/#{filetype}/#{rev}#{reluri}"
+    "#{@http_root}/#{filetype}/#{commit_hash}#{reluri}"
   end
 
   def handle_request0(repo, req, res)
@@ -126,39 +126,39 @@ class Server
   end
 end
 
-def find_git_repository(relpath, d, rev)
+def find_git_repository(relpath, d, commit_hash)
   relpath = relpath.to_s
-  if rev
-    command = ['git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', rev, "--", "#{d.to_s}/#{relpath}"]
+  if commit_hash
+    command = ['git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', commit_hash, "--", "#{d.to_s}/#{relpath}"]
   else
     command = ['git', "--git-dir=#{d.to_s}/.git", "--work-tree=#{d.to_s}", 'log', '--pretty=format:%H', '-1', "--", "#{d.to_s}/#{relpath}"]
   end
-  rev, status = Open3.capture2(*command)
+  commit_hash, status = Open3.capture2(*command)
   if !status.success?
     raise "git log failed"
   end
-  return GITRepo.new(d), relpath, rev
+  return GITRepo.new(d), relpath, commit_hash
 end
 
 def parse_arguments(argv)
   # process options
   if argv.length == 1
-    rev = nil
+    commit_hash = nil
     filename = argv[0]
   else
-    rev = argv[0]
+    commit_hash = argv[0]
     filename = argv[1]
   end
-  [filename, rev]
+  [filename, commit_hash]
 end
 
-def setup_repository(filename, rev)
+def setup_repository(filename, commit_hash)
   filename ||= '.'
   f = Pathname(filename).realpath
   [*f.ascend.to_a, Pathname('.')].each {|d|
     if (d+".git").exist?
       relpath = f.relative_path_from(d)
-      return find_git_repository(relpath, d, rev)
+      return find_git_repository(relpath, d, commit_hash)
     end
   }
   raise "cannot find a repository"
@@ -173,10 +173,10 @@ def run_browser(url)
 end
 
 def main(argv)
-  filename, rev = parse_arguments(argv)
-  repo, relpath, rev = setup_repository filename, rev
-  filetype = repo.file_type(rev, relpath)
+  filename, commit_hash = parse_arguments(argv)
+  repo, relpath, commit_hash = setup_repository filename, commit_hash
+  filetype = repo.file_type(commit_hash, relpath)
   server = Server.new(repo)
-  run_browser server.annotate_url(filetype, relpath, rev)
+  run_browser server.annotate_url(filetype, relpath, commit_hash)
   exit(true)
 end
