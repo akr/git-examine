@@ -141,7 +141,13 @@ class GITRepo
     target_commit = list[0]
     relpath = list[1..-1].join('/')
 
-    result = '<pre>'
+    result = ''
+    result << "<ul>\n"
+    result << "<li>target_commit=#{h target_commit}</li>\n"
+    result << "<li>relpath=#{h relpath}</li>\n"
+    result << "</ul>\n"
+
+    result << '<pre>'
 
     forward_data = []
     forward_author_name_width = 0
