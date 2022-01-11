@@ -38,7 +38,7 @@ class GITRepo
         case line
         when /\Acommit (\S+)(.*)\n/
           this_commit, rest = $1, $2
-          href = ['commit', this_commit].map {|n| u(n) }.join('/')
+          href = ['commit', this_commit, *relpath_list].map {|n| u(n) }.join('/')
           result << %Q{commit <a name="#{this_commit}" href="/#{href}">#{h(this_commit)}</a>#{h(rest)}\n}
         else
           result << h(line)
@@ -197,6 +197,8 @@ class GITRepo
 
   def format_commit(list)
     target_commit = list[0]
+    relpath_list = list[1..-1] # relpath is not used in commit view but pass to directory view.
+
     log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
 	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', '--parents', target_commit)
     log_out.force_encoding('locale').scrub!
@@ -215,6 +217,8 @@ class GITRepo
     result << "<li>target_commit=#{h target_commit}</li>\n"
     href = ['log', target_commit].map {|n| u(n) }.join('/') + '#' + target_commit
     result << %Q{<li><a href="/#{h href}">log</a></li>\n}
+    href = ['dir', target_commit, *relpath_list].map {|n| u(n) }.join('/')
+    result << %Q{<li><a href="/#{h href}">tree</a></li>\n}
     result << "</ul>\n"
 
     result << '<pre>'
