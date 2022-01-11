@@ -61,6 +61,10 @@ class GITRepo
     result << "<li>relpath=#{h relpath}</li>\n"
     href = ['log', target_commit, *relpath_list].map {|n| u(n) }.join('/') + '#' + target_commit
     result << %Q{<li><a href="/#{h href}">log</a></li>\n}
+    if !relpath_list.empty?
+      href = ['dir', target_commit, *relpath_list[0...-1].map {|n| u(n) }].join('/')
+      result << %Q{<li><a href="/#{h href}">parent directory</a></li>\n}
+    end
     result << "</ul>\n"
     result << "<pre>"
     out.each_line("\0") {|line|
