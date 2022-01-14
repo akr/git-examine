@@ -87,7 +87,7 @@ class Server
     @th.join
   end
 
-  def annotate_url(filetype, relpath, commit_hash)
+  def annotate_url(filetype, commit_hash, relpath)
     names = relpath.split(/\/+/)
     raise "relpath contains .." if names.include?('..')
     names.delete('.')
@@ -181,6 +181,6 @@ def main(argv)
   repo, relpath, commit_hash = setup_repository filename, commit_hash
   filetype = repo.file_type(commit_hash, relpath)
   server = Server.new(repo)
-  run_browser server.annotate_url(filetype, relpath, commit_hash)
+  run_browser server.annotate_url(filetype, commit_hash, relpath)
   exit(true)
 end
