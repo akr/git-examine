@@ -97,8 +97,8 @@ class GITRepo
         case line
         when /\Acommit (\S+)(.*)\n/
           this_commit, rest = $1, $2
-          href = ['commit', this_commit, *relpath_list].map {|n| u(n) }.join('/')
-          result << %Q{commit <a name="#{h this_commit}" href="/#{h href}">#{h this_commit}</a>#{h rest}\n}
+          href = make_href('commit', [this_commit, *relpath_list], [])
+          result << %Q{commit <a name="#{h this_commit}" href="#{h href}">#{h this_commit}</a>#{h rest}\n}
         else
           result << h(line)
         end
