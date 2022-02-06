@@ -3,13 +3,13 @@ class GITRepo
     @topdir = topdir
   end
 
-  def make_href(action, list, assoc)
+  def make_href(action, list, query: [])
     result = "/#{u action}"
     list.each {|item|
       result << "/#{u item}"
     }
-    if !assoc.empty?
-      result << "?" << assoc.map {|k,v| "#{u k}=#{u v}" }.join("&")
+    if !query.empty?
+      result << "?" << query.map {|k,v| "#{u k}=#{u v}" }.join("&")
     end
     result
   end
@@ -83,7 +83,7 @@ class GITRepo
     if max_count
       result << "<li>"
       [(max_count * 2).to_s, (max_count * 10).to_s, 'all'].each {|n|
-        href = make_href('log', list, assoc.reject {|k,v| k == 'max-count' } + [['max-count', n]])
+        href = make_href('log', list, query: assoc.reject {|k,v| k == 'max-count' } + [['max-count', n]])
         result << %Q{<a href="#{h href}">log(#{u n})</a>\n}
       }
       result << "</li>"
@@ -97,7 +97,7 @@ class GITRepo
         case line
         when /\Acommit (\S+)(.*)\n/
           this_commit, rest = $1, $2
-          href = make_href('commit', [this_commit, *relpath_list], [])
+          href = make_href('commit', [this_commit, *relpath_list])
           result << %Q{commit <a name="#{h this_commit}" href="#{h href}">#{h this_commit}</a>#{h rest}\n}
         else
           result << h(line)
@@ -118,10 +118,10 @@ class GITRepo
     result << "<ul>\n"
     result << "<li>target_commit=#{h target_commit}</li>\n"
     result << "<li>relpath=#{h relpath}</li>\n"
-    href = make_href('log', [target_commit], [*(relpath_list.empty? ? [] : [['path', relpath_list.join('/')]])])
+    href = make_href('log', [target_commit], query: [*(relpath_list.empty? ? [] : [['path', relpath_list.join('/')]])])
     result << %Q{<li><a href="#{h href}">log</a></li>\n}
     if !relpath_list.empty?
-      href = make_href('dir', [target_commit, *relpath_list[0...-1]], [])
+      href = make_href('dir', [target_commit, *relpath_list[0...-1]])
       result << %Q{<li><a href="#{h href}">parent directory</a></li>\n}
     end
     result << "</ul>\n"
@@ -136,10 +136,10 @@ class GITRepo
       filename = $4
       case filetype
       when 'blob'
-        href = make_href('file', [target_commit, *filename.split(/\//).reject {|name| name == '.' }], [])
+        href = make_href('file', [target_commit, *filename.split(/\//).reject {|name| name == '.' }])
         result << %Q{#{h filetype} <a href="#{h href}">#{h filename}</a>\n}
       when 'tree'
-        href = make_href('dir', [target_commit, *filename.split(/\//).reject {|name| name == '.' }], [])
+        href = make_href('dir', [target_commit, *filename.split(/\//).reject {|name| name == '.' }])
         result << %Q{#{h filetype} <a href="#{h href}">#{h filename}</a>\n}
       else
         result << %Q{#{h filetype} #{h filename}\n}
@@ -277,9 +277,9 @@ class GITRepo
     result = ""
     result << "<ul>\n"
     result << "<li>target_commit=#{h target_commit}</li>\n"
-    href = make_href('log', [target_commit], [])
+    href = make_href('log', [target_commit])
     result << %Q{<li><a href="#{h href}">log</a></li>\n}
-    href = make_href('dir', [target_commit, *relpath_list], [])
+    href = make_href('dir', [target_commit, *relpath_list])
     result << %Q{<li><a href="#{h href}">tree</a></li>\n}
     result << "</ul>\n"
 
@@ -289,7 +289,7 @@ class GITRepo
       when /\Acommit (.*)\n\z/
         commits = $1
         commits = commits.scan(/\S+/).map {|c|
-          href = make_href('commit', [c], [])
+          href = make_href('commit', [c])
           %Q{<a href="#{h href}">#{c}</a>}
         }.join(' ')
         result << "commit #{commits}\n"
