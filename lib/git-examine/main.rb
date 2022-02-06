@@ -17,6 +17,34 @@ class String
   end
 end
 
+
+def shell_escape_word(word)
+  if %r{\A[,-./0-9:=@A-Z_a-z~]+\z} =~ word
+    word
+  else
+    "'" + word.gsub(/'/, "'\\''") + "'"
+  end
+end
+
+def shell_escape_command(command)
+  if command[0].is_a? Hash
+    env = command[0]
+    command = command[1..-1]
+  else
+    env = nil
+  end
+  ary = []
+  if env
+    env.each {|k,v|
+      ary << "#{shell_escape_word k}=#{shell_escape_word v}"
+    }
+  end
+  command.each {|word|
+    ary << shell_escape_word(word)
+  }
+  ary.join(' ')
+end
+
 def scan_udiff(string)
   ln_cur1 = 0
   ln_cur2 = 0
@@ -112,18 +140,20 @@ class Server
 
   def handle_request(repo, req, res)
     res.content_type = 'text/html'
-    list = req.request_uri.path.scan(%r{[^/]+}).map {|s| CGI.unescape(s) }
+    uri = req.request_uri
+    list = uri.path.scan(%r{[^/]+}).map {|s| CGI.unescape(s) }
+    assoc = uri.query ? URI.decode_www_form(uri.query) : []
     case list[0]
     when 'dir'
-      res.body = repo.format_dir list[1..-1]
+      res.body = repo.format_dir list[1..-1], assoc
     when 'file'
-      res.body = repo.format_file list[1..-1]
+      res.body = repo.format_file list[1..-1], assoc
     when 'commit', 'diff-parents'
-      res.body = repo.format_commit list[1..-1]
+      res.body = repo.format_commit list[1..-1], assoc
     when 'diff-children'
-      res.body = repo.format_diff_children list[1..-1]
+      res.body = repo.format_diff_children list[1..-1], assoc
     when 'log'
-      res.body = repo.format_log list[1..-1]
+      res.body = repo.format_log list[1..-1], assoc
     else
       raise "unexpected command"
     end

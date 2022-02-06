@@ -3,6 +3,17 @@ class GITRepo
     @topdir = topdir
   end
 
+  def make_href(action, list, assoc)
+    result = "/#{u action}"
+    list.each {|item|
+      result << "/#{u item}"
+    }
+    if !assoc.empty?
+      result << "?" << assoc.map {|k,v| "#{u k}=#{u v}" }.join("&")
+    end
+    result
+  end
+
   def file_type(commit_hash, relpath)
     if relpath == '.'
       'dir'
@@ -20,17 +31,65 @@ class GITRepo
     end
   end
 
-  def format_log(list)
-    target_commit = list[0]
-    relpath_list = list[1..-1]
-    relpath = relpath_list.empty? ? '.' : relpath_list.map {|n| n + '/' }.join
-    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'log', '-z', relpath]
-    out, status = Open3.capture2(*command)
+  def format_log(list, assoc)
     result = ""
+
+    list.each {|commit_range_arg|
+      if /\A\^?[0-9a-f]+\z/ !~ commit_range_arg
+        raise "unexpected commit range argument: #{commit_range_arg.inspect}"
+      end
+    }
+    commit_range = list
+
+    paths = assoc.filter_map {|k,v|
+      if k == "path"
+        ary = v.scan(%r{[^/]+})
+        raise "path contains '.': #{v.inspect}" if ary.include?('.')
+        raise "path contains '..': #{v.inspect}" if ary.include?('..')
+        if ary.empty?
+          '.'
+        else
+          ary.join('/')
+        end
+      else
+        nil
+      end
+    }
+    if paths.empty?
+      relpath_list = []
+    else
+      relpath_list = paths[0].scan(%r{[^/]+})
+    end
+
+    if kv = assoc.assoc('max-count')
+      k, v = kv
+      if v == 'all'
+        max_count = nil
+      else
+        max_count = v.to_i
+      end
+    else
+      max_count = 1000
+    end
+
+    command = [{'LC_ALL'=>'C'}, 'git', "--git-dir=#{@topdir}/.git", "--work-tree=#{@topdir}", 'log',
+               *(max_count ? ["--max-count=#{max_count}"] : []),
+               '-z',
+               *commit_range, '--', *paths]
+    out, status = Open3.capture2(*command)
     result << "<ul>\n"
-    result << "<li>target_commit=#{h target_commit}</li>\n"
-    result << "<li>relpath=#{h relpath}</li>\n"
+    commit_range.each {|commit| result << "<li>commit=#{h commit}</li>\n" }
+    paths.each {|path| result << "<li>path=#{h path}</li>\n" }
+    if max_count
+      result << "<li>"
+      [(max_count * 2).to_s, (max_count * 10).to_s, 'all'].each {|n|
+        href = make_href('log', list, assoc.reject {|k,v| k == 'max-count' } + [['max-count', n]])
+        result << %Q{<a href="#{h href}">log(#{u n})</a>\n}
+      }
+      result << "</li>"
+    end
     result << "</ul>\n"
+
     out.each_line("\0") {|commit|
       commit.chomp!("\0")
       result << "<pre>"
@@ -39,7 +98,7 @@ class GITRepo
         when /\Acommit (\S+)(.*)\n/
           this_commit, rest = $1, $2
           href = ['commit', this_commit, *relpath_list].map {|n| u(n) }.join('/')
-          result << %Q{commit <a name="#{this_commit}" href="/#{href}">#{h(this_commit)}</a>#{h(rest)}\n}
+          result << %Q{commit <a name="#{h this_commit}" href="/#{h href}">#{h this_commit}</a>#{h rest}\n}
         else
           result << h(line)
         end
@@ -49,7 +108,7 @@ class GITRepo
     result
   end
 
-  def format_dir(list)
+  def format_dir(list, assoc)
     target_commit = list[0]
     relpath_list = list[1..-1]
     relpath = relpath_list.empty? ? '.' : relpath_list.map {|n| n + '/' }.join
@@ -59,11 +118,11 @@ class GITRepo
     result << "<ul>\n"
     result << "<li>target_commit=#{h target_commit}</li>\n"
     result << "<li>relpath=#{h relpath}</li>\n"
-    href = ['log', target_commit, *relpath_list].map {|n| u(n) }.join('/') + '#' + target_commit
-    result << %Q{<li><a href="/#{h href}">log</a></li>\n}
+    href = make_href('log', [target_commit], [*(relpath_list.empty? ? [] : [['path', relpath_list.join('/')]])])
+    result << %Q{<li><a href="#{h href}">log</a></li>\n}
     if !relpath_list.empty?
-      href = ['dir', target_commit, *relpath_list[0...-1].map {|n| u(n) }].join('/')
-      result << %Q{<li><a href="/#{h href}">parent directory</a></li>\n}
+      href = make_href('dir', [target_commit, *relpath_list[0...-1]], [])
+      result << %Q{<li><a href="#{h href}">parent directory</a></li>\n}
     end
     result << "</ul>\n"
     result << "<pre>"
@@ -77,15 +136,11 @@ class GITRepo
       filename = $4
       case filetype
       when 'blob'
-        href = ['file', target_commit, *filename.split(/\//)]
-        href.delete('.')
-        href.map! {|n| u(n) }
-        result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
+        href = make_href('file', [target_commit, *filename.split(/\//).reject {|name| name == '.' }], [])
+        result << %Q{#{h filetype} <a href="#{h href}">#{h filename}</a>\n}
       when 'tree'
-        href = ['dir', target_commit, *filename.split(/\//)]
-        href.delete('.')
-        href.map! {|n| u(n) }
-        result << %Q{#{h filetype} <a href="/#{href.join('/')}">#{h filename}</a>\n}
+        href = make_href('dir', [target_commit, *filename.split(/\//).reject {|name| name == '.' }], [])
+        result << %Q{#{h filetype} <a href="#{h href}">#{h filename}</a>\n}
       else
         result << %Q{#{h filetype} #{h filename}\n}
       end
@@ -137,7 +192,7 @@ class GITRepo
     parse_git_blame_porcelain(command, &b)
   end
 
-  def format_file(list)
+  def format_file(list, assoc)
     target_commit = list[0]
     relpath = list[1..-1].join('/')
 
@@ -201,15 +256,16 @@ class GITRepo
     result
   end
 
-  def format_commit(list)
+  def format_commit(list, assoc)
     target_commit = list[0]
     relpath_list = list[1..-1] # relpath is not used in commit view but pass to directory view.
 
-    log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
-	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', '--parents', target_commit)
+    command = [{'LC_ALL'=>'C'},
+	'git', "--git-dir=#{@topdir.to_s}/.git", "--work-tree=#{@topdir.to_s}", 'log', '--name-status', '--date=iso', '-1', '--parents', target_commit]
+    log_out, log_err, log_status = Open3.capture3(*command)
     log_out.force_encoding('locale').scrub!
     if !log_status.success?
-      raise "git log failed."
+      raise "git log failed: #{shell_escape_command command}\n#{log_err}"
     end
 
     if /^commit ([0-9a-f]+)(.*)\n/ !~ log_out
@@ -221,10 +277,10 @@ class GITRepo
     result = ""
     result << "<ul>\n"
     result << "<li>target_commit=#{h target_commit}</li>\n"
-    href = ['log', target_commit].map {|n| u(n) }.join('/') + '#' + target_commit
-    result << %Q{<li><a href="/#{h href}">log</a></li>\n}
-    href = ['dir', target_commit, *relpath_list].map {|n| u(n) }.join('/')
-    result << %Q{<li><a href="/#{h href}">tree</a></li>\n}
+    href = make_href('log', [target_commit], [])
+    result << %Q{<li><a href="#{h href}">log</a></li>\n}
+    href = make_href('dir', [target_commit, *relpath_list], [])
+    result << %Q{<li><a href="#{h href}">tree</a></li>\n}
     result << "</ul>\n"
 
     result << '<pre>'
@@ -233,7 +289,7 @@ class GITRepo
       when /\Acommit (.*)\n\z/
         commits = $1
         commits = commits.scan(/\S+/).map {|c|
-          href = ['commit', c].map {|n| '/' + u(n) }.join
+          href = make_href('commit', [c], [])
           %Q{<a href="#{h href}">#{c}</a>}
         }.join(' ')
         result << "commit #{commits}\n"
@@ -254,7 +310,7 @@ class GITRepo
     result
   end
 
-  def format_diff_children(list)
+  def format_diff_children(list, assoc)
     target_commit = list[0]
 
     log_out, log_status = Open3.capture2({'LC_ALL'=>'C'},
