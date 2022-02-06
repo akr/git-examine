@@ -78,8 +78,8 @@ class GITRepo
                *commit_range, '--', *paths]
     out, status = Open3.capture2(*command)
     result << "<ul>\n"
-    commit_range.each {|commit| result << "<li>commit=#{h commit}</li>\n" }
-    paths.each {|path| result << "<li>path=#{h path}</li>\n" }
+    commit_range.each {|commit| result << "<li>commit: #{h commit}</li>\n" }
+    paths.each {|path| result << "<li>path: #{h path}</li>\n" }
     if max_count
       result << "<li>"
       [(max_count * 2).to_s, (max_count * 10).to_s, 'all'].each {|n|
@@ -116,8 +116,8 @@ class GITRepo
     out, status = Open3.capture2(*command)
     result = ""
     result << "<ul>\n"
-    result << "<li>target_commit=#{h target_commit}</li>\n"
-    result << "<li>relpath=#{h relpath}</li>\n"
+    result << "<li>target_commit: #{h target_commit}</li>\n"
+    result << "<li>relpath: #{h relpath}</li>\n"
     href = make_href('log', [target_commit], query: [*(relpath_list.empty? ? [] : [['path', relpath_list.join('/')]])])
     result << %Q{<li><a href="#{h href}">log</a></li>\n}
     if !relpath_list.empty?
@@ -198,8 +198,8 @@ class GITRepo
 
     result = ''
     result << "<ul>\n"
-    result << "<li>target_commit=#{h target_commit}</li>\n"
-    result << "<li>relpath=#{h relpath}</li>\n"
+    result << "<li>target_commit: #{h target_commit}</li>\n"
+    result << "<li>relpath: #{h relpath}</li>\n"
     result << "</ul>\n"
 
     result << '<pre>'
@@ -276,7 +276,7 @@ class GITRepo
 
     result = ""
     result << "<ul>\n"
-    result << "<li>target_commit=#{h target_commit}</li>\n"
+    result << "<li>target_commit: #{h target_commit}</li>\n"
     href = make_href('log', [target_commit])
     result << %Q{<li><a href="#{h href}">log</a></li>\n}
     href = make_href('dir', [target_commit, *relpath_list])
